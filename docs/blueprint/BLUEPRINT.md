@@ -390,11 +390,11 @@ class LLMProvider:
     def analyze(self, incident):
         raise NotImplementedError
 
-class OllamaProvider(LLMProvider):
-    ...
 
-class CloudProvider(LLMProvider):
-    ...
+class OllamaProvider(LLMProvider): ...
+
+
+class CloudProvider(LLMProvider): ...
 ```
 
 For a research comparison, evaluate local, cloud and hybrid invocation. Measure accuracy,
