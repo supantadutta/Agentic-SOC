@@ -1,0 +1,32 @@
+<!--
+  Network-sensor agent additions (Suricata + Zeek VM, /var/ossec/etc/ossec.conf).
+  Only SELECTED events go to Wazuh: Suricata alerts/anomalies (eve-wazuh.json, see
+  deploy/suricata/suricata-lab.yaml) and a subset of Zeek logs. Full-fidelity Zeek and EVE
+  logs stay on the sensor for investigation.
+-->
+<ossec_config>
+
+  <localfile>
+    <log_format>json</log_format>
+    <location>/var/log/suricata/eve-wazuh.json</location>
+  </localfile>
+
+  <localfile>
+    <log_format>json</log_format>
+    <location>/opt/zeek/logs/current/notice.log</location>
+    <label key="agentic_source">zeek.notice</label>
+  </localfile>
+
+  <localfile>
+    <log_format>json</log_format>
+    <location>/opt/zeek/logs/current/ssl.log</location>
+    <label key="agentic_source">zeek.ssl</label>
+  </localfile>
+
+  <localfile>
+    <log_format>json</log_format>
+    <location>/opt/zeek/logs/current/files.log</location>
+    <label key="agentic_source">zeek.files</label>
+  </localfile>
+
+</ossec_config>

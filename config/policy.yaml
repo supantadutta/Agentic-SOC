@@ -1,0 +1,62 @@
+# Agentic SOC response policy (blueprint section 16).
+#
+# Every threshold here is an EXPERIMENTAL PARAMETER. Evaluate alternatives with
+# `python -m evaluation.run_evaluation --policy <file>` and report the effect, rather than
+# presenting any value as universally correct.
+version: policy-v1
+
+risk_scoring:
+  # Risk score (0-10) = round(llm_weight * severity_score + rule_level_weight * wazuh_level_score)
+  #                     + threat_intel_bonus (if any indicator is malicious), capped to benign_cap
+  #                     when the LLM classifies the incident as benign.
+  # wazuh_level_score = round(max Wazuh rule level (0-15) * 10 / 15)
+  severity_scores:
+    informational: 1
+    low: 3
+    medium: 6
+    high: 8
+    critical: 10
+  llm_weight: 0.7
+  rule_level_weight: 0.3
+  threat_intel_bonus: 1
+  benign_cap: 4
+
+# Severity bands, inclusive. Blueprint: <5 no automation, 5-7 recommendation only,
+# 8-9 predefined automation if policy permits, 10 human approval.
+bands:
+  - { name: low, min: 0, max: 4, outcome: LOG_ONLY }
+  - { name: medium, min: 5, max: 7, outcome: RECOMMEND }
+  - { name: high, min: 8, max: 9, outcome: AUTO_EXECUTE }
+  - { name: critical, min: 10, max: 10, outcome: REQUIRE_APPROVAL }
+
+confidence:
+  # Confidence below this sends the incident to human review regardless of severity.
+  min_for_automation: 0.80
+  below_threshold_outcome: HUMAN_REVIEW
+
+automation:
+  enabled: true                 # global kill switch: false => nothing runs without approval
+  auto_allowed_actions: [COLLECT_EVIDENCE, BLOCK_IP, ISOLATE_HOST]
+  always_require_approval: [DISABLE_USER]
+  max_targets_per_action: 3
+  max_auto_actions_per_hour: 10
+  # If the LLM failed and the deterministic fallback produced the triage, never auto-execute.
+  allow_auto_on_fallback_triage: false
+
+network:
+  internal_cidrs: [192.168.50.0/24]
+  # Never blocked, whatever the evidence says (gateway, SOC infrastructure, DC).
+  never_block:
+    - 192.168.50.1
+    - 192.168.50.10
+    - 192.168.50.20
+    - 192.168.50.30
+    - 192.168.50.40
+    - 192.168.50.50
+    - 127.0.0.0/8
+
+protected_assets:
+  # Automation never acts on these; an analyst must approve explicitly.
+  hosts: [wazuh, wazuh.manager, misp, agentic-soc, sensor, dc01, 192.168.50.10, 192.168.50.20,
+          192.168.50.30, 192.168.50.40, 192.168.50.50]
+  users: [administrator, krbtgt, root, wazuh, soc-admin]

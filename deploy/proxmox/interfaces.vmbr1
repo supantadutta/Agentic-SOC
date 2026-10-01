@@ -1,0 +1,9 @@
+# Append to /etc/network/interfaces on the Proxmox host, then: ifreload -a
+# Isolated lab bridge: no physical port, no host IP. The lab gateway is the OPNsense VM.
+auto vmbr1
+iface vmbr1 inet manual
+    bridge-ports none
+    bridge-stp off
+    bridge-fd 0
+    # Hub mode: flood all frames so the sensor's capture NIC sees all lab traffic.
+    bridge-ageing 0

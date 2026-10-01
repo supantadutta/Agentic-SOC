@@ -1,0 +1,27 @@
+# Example cost-model inputs (blueprint section 25). Every value is a placeholder:
+# replace with your own hardware, tariff and workload measurements.
+period_months: 12
+
+hardware:
+  purchase_usd: 0            # 0 when reusing an existing 8c/16t, 32 GB RAM, 1 TB NVMe host
+  amortization_months: 36
+
+storage:
+  purchase_usd: 0            # e.g. a second NVMe for log/packet retention
+  monthly_usd: 0
+
+electricity:
+  average_watts: 150         # measure at the wall with all lab VMs running
+  hours_per_day: 24
+  price_per_kwh_usd: 0.15
+
+backup:
+  monthly_usd: 5             # off-host backup of the research database and Wazuh config
+
+maintenance:
+  hours_per_month: 4         # patching, rule tuning, playbook upkeep
+  hourly_rate_usd: 0         # set to price engineering time explicitly
+
+cloud_api:
+  alerts_per_month: 30000    # alerts that reach the orchestrator (after the Wazuh level filter)
+  ai_cost_per_alert_usd: null  # null => taken from --results metrics.json

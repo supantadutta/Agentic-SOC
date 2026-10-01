@@ -1,0 +1,12 @@
+# USD per 1M tokens, used to record cost per LLM decision.
+# Prices change: verify against the provider's current price list before reporting results.
+# Claude API first-party prices; cache_write defaults to 1.25x input when omitted.
+claude-opus-5-5:   { input: 4.00, output: 20.00, cache_read: 0.20 }
+claude-sonnet-5-5: { input: 2.00, output: 10.00, cache_read: 0.20 }
+claude-haiku-4-5:  { input: 1.00, output: 5.00 }
+# Possible server-side fallback targets (billed at their own rates when they serve a request).
+claude-opus-5:     { input: 5.00, output: 25.00 }
+claude-opus-4-8:   { input: 5.00, output: 25.00 }
+# Local inference has no per-token API price. To attribute electricity per token instead,
+# set a non-zero rate here derived from your measured watts and tokens/second.
+local:             { input: 0.0, output: 0.0 }

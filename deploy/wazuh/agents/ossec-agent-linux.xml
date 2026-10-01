@@ -1,0 +1,32 @@
+<!--
+  Linux agent additions (/var/ossec/etc/ossec.conf, inside <ossec_config>).
+  Authentication, SSH and sudo come from the default journald/syslog collection.
+  Prerequisite for process telemetry: `apt install auditd` and the execve rules below in
+  /etc/audit/rules.d/agentic-soc.rules:
+      -a always,exit -F arch=b64 -S execve -k agentic_exec
+      -a always,exit -F arch=b32 -S execve -k agentic_exec
+-->
+<ossec_config>
+
+  <localfile>
+    <log_format>audit</log_format>
+    <location>/var/log/audit/audit.log</location>
+  </localfile>
+
+  <!-- Package telemetry (Debian/Ubuntu); syscollector also inventories packages. -->
+  <localfile>
+    <log_format>syslog</log_format>
+    <location>/var/log/dpkg.log</location>
+  </localfile>
+
+  <localfile>
+    <log_format>apache</log_format>
+    <location>/var/log/apache2/access.log</location>
+  </localfile>
+
+  <syscheck>
+    <directories check_all="yes" realtime="yes">/tmp,/var/tmp,/dev/shm</directories>
+    <directories check_all="yes" realtime="yes">/etc/cron.d,/etc/systemd/system,/root/.ssh</directories>
+  </syscheck>
+
+</ossec_config>
