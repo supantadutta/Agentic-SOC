@@ -1,0 +1,93 @@
+<!--
+  Agentic SOC additions for the Wazuh MANAGER ossec.conf (inside <ossec_config>).
+  Docker single-node: edit single-node/config/wazuh_cluster/wazuh_manager.conf, then
+  `docker compose restart wazuh.manager`.
+-->
+<ossec_config>
+
+  <!-- 1. Forward alerts of level >= 7 to the orchestrator (Agentic SOC VM). -->
+  <integration>
+    <name>custom-agentic-soc.py</name>
+    <hook_url>http://192.168.50.20:8000/api/v1/alerts/wazuh</hook_url>
+    <!-- Same value as SOC_INGEST_API_KEY on the orchestrator. -->
+    <api_key>REPLACE_WITH_SOC_INGEST_API_KEY</api_key>
+    <level>7</level>
+    <alert_format>json</alert_format>
+  </integration>
+
+  <!--
+    2. Commands the orchestrator's playbooks call through PUT /active-response.
+       Copy the scripts from deploy/wazuh/active-response/ to every agent:
+         Linux:   /var/ossec/active-response/bin/            (root:wazuh, 750)
+         Windows: C:\Program Files (x86)\ossec-agent\active-response\bin\
+  -->
+  <command>
+    <name>agentic-isolate-linux</name>
+    <executable>agentic-isolate.sh</executable>
+    <timeout_allowed>no</timeout_allowed>
+  </command>
+  <command>
+    <name>agentic-isolate-windows</name>
+    <executable>agentic-isolate.cmd</executable>
+    <timeout_allowed>no</timeout_allowed>
+  </command>
+  <command>
+    <name>agentic-collect-evidence-linux</name>
+    <executable>agentic-collect-evidence.sh</executable>
+    <timeout_allowed>no</timeout_allowed>
+  </command>
+  <command>
+    <name>agentic-collect-evidence-windows</name>
+    <executable>agentic-collect-evidence.cmd</executable>
+    <timeout_allowed>no</timeout_allowed>
+  </command>
+  <command>
+    <name>agentic-disable-user-linux</name>
+    <executable>agentic-disable-user.sh</executable>
+    <timeout_allowed>no</timeout_allowed>
+  </command>
+  <command>
+    <name>agentic-disable-user-windows</name>
+    <executable>agentic-disable-user.cmd</executable>
+    <timeout_allowed>no</timeout_allowed>
+  </command>
+
+  <!--
+    3. Register the commands with agents. These blocks reference rule 100999, which is
+       defined in local_rules.xml but can never match, so the commands run ONLY when the
+       orchestrator calls the API after the policy engine (and, where required, an analyst)
+       allowed it. Verify on your Wazuh version by calling PUT /active-response from the
+       dashboard's API console and checking /var/ossec/logs/active-responses.log on the agent.
+  -->
+  <active-response>
+    <command>agentic-isolate-linux</command>
+    <location>local</location>
+    <rules_id>100999</rules_id>
+  </active-response>
+  <active-response>
+    <command>agentic-isolate-windows</command>
+    <location>local</location>
+    <rules_id>100999</rules_id>
+  </active-response>
+  <active-response>
+    <command>agentic-collect-evidence-linux</command>
+    <location>local</location>
+    <rules_id>100999</rules_id>
+  </active-response>
+  <active-response>
+    <command>agentic-collect-evidence-windows</command>
+    <location>local</location>
+    <rules_id>100999</rules_id>
+  </active-response>
+  <active-response>
+    <command>agentic-disable-user-linux</command>
+    <location>local</location>
+    <rules_id>100999</rules_id>
+  </active-response>
+  <active-response>
+    <command>agentic-disable-user-windows</command>
+    <location>local</location>
+    <rules_id>100999</rules_id>
+  </active-response>
+
+</ossec_config>

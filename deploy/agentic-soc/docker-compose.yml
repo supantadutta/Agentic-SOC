@@ -1,0 +1,69 @@
+# Phase 6/7 - Agentic SOC orchestrator + PostgreSQL research database (+ optional local LLM).
+# Run from the repository root on the Agentic SOC VM (192.168.50.20):
+#
+#   cp .env.example .env    # then edit secrets
+#   docker compose --env-file .env -f deploy/agentic-soc/docker-compose.yml up -d --build
+#   docker compose --env-file .env -f deploy/agentic-soc/docker-compose.yml --profile local-llm up -d
+#
+# With the local-llm profile, pull a model once:
+#   docker compose --env-file .env -f deploy/agentic-soc/docker-compose.yml exec ollama ollama pull llama3.1:8b
+# Copy the Wazuh root CA (single-node/config/wazuh_indexer_ssl_certs/root-ca.pem) to ./tls/.
+name: agentic-soc
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: agentic_soc
+      POSTGRES_USER: agentic_soc
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agentic_soc -d agentic_soc"]
+      interval: 10s
+      retries: 5
+    # Not published: only the orchestrator talks to the database.
+
+  orchestrator:
+    build:
+      context: ../..
+    restart: unless-stopped
+    env_file: ../../.env
+    environment:
+      SOC_DATABASE_URL: postgresql+psycopg://agentic_soc:${POSTGRES_PASSWORD}@postgres:5432/agentic_soc
+      SOC_OLLAMA_URL: ${SOC_OLLAMA_URL:-http://ollama:11434}
+      SOC_EVIDENCE_DIR: /opt/agentic-soc/evidence
+      SOC_ATTACK_DATA_PATH: /opt/agentic-soc/data/enterprise-attack.json
+    volumes:
+      - evidence:/opt/agentic-soc/evidence
+      - attack-data:/opt/agentic-soc/data
+      - ../../tls:/opt/agentic-soc/tls:ro  # SOC_TLS_CA_BUNDLE=/opt/agentic-soc/tls/root-ca.pem
+    ports:
+      # Bind to the lab address only; never expose the API beyond the lab network.
+      - "${SOC_BIND_ADDRESS:-192.168.50.20}:8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  ollama:
+    image: ollama/ollama:latest
+    profiles: ["local-llm"]
+    restart: unless-stopped
+    volumes:
+      - ollama:/root/.ollama
+    # Uncomment for an NVIDIA GPU (requires the NVIDIA container toolkit):
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+
+volumes:
+  pgdata:
+  evidence:
+  attack-data:
+  ollama:

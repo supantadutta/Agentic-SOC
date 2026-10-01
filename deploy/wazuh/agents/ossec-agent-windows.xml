@@ -1,0 +1,32 @@
+<!--
+  Windows agent additions (C:\Program Files (x86)\ossec-agent\ossec.conf, inside <ossec_config>).
+  Security, System and Application channels are collected by default.
+  Prerequisites: Sysmon installed (deploy/sysmon/README.md) and PowerShell Script Block Logging
+  enabled by GPO (Administrative Templates > Windows Components > Windows PowerShell).
+-->
+<ossec_config>
+
+  <localfile>
+    <location>Microsoft-Windows-Sysmon/Operational</location>
+    <log_format>eventchannel</log_format>
+  </localfile>
+
+  <localfile>
+    <location>Microsoft-Windows-PowerShell/Operational</location>
+    <log_format>eventchannel</log_format>
+    <!-- 4104 = script block logging -->
+    <query>Event/System[EventID=4104]</query>
+  </localfile>
+
+  <localfile>
+    <location>Microsoft-Windows-Windows Defender/Operational</location>
+    <log_format>eventchannel</log_format>
+  </localfile>
+
+  <!-- File integrity monitoring on user-writable execution paths. -->
+  <syscheck>
+    <directories check_all="yes" realtime="yes">C:\Users\Public</directories>
+    <directories check_all="yes" realtime="yes" restrict="\.exe$|\.dll$|\.ps1$|\.bat$|\.vbs$|\.js$|\.hta$">%WINDIR%\Temp</directories>
+  </syscheck>
+
+</ossec_config>

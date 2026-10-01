@@ -1,0 +1,32 @@
+# systemd unit for a non-Docker install in /opt/agentic-soc (blueprint section 12):
+#   sudo useradd --system --home /opt/agentic-soc agentic
+#   cd /opt/agentic-soc && python3 -m venv .venv && .venv/bin/pip install ".[postgres,cloud]"
+#   sudo cp deploy/agentic-soc/agentic-soc.service /etc/systemd/system/
+#   sudo systemctl daemon-reload && sudo systemctl enable --now agentic-soc
+[Unit]
+Description=Agentic SOC orchestrator
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=agentic
+Group=agentic
+WorkingDirectory=/opt/agentic-soc
+EnvironmentFile=/opt/agentic-soc/.env
+ExecStart=/opt/agentic-soc/.venv/bin/uvicorn --factory agentic_soc.api.app:app_factory --host 192.168.50.20 --port 8000
+Restart=on-failure
+RestartSec=5
+
+# Hardening: the orchestrator only needs network access and its own data directories.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/agentic-soc/evidence /opt/agentic-soc/data
+CapabilityBoundingSet=
+RestrictSUIDSGID=true
+LockPersonality=true
+
+[Install]
+WantedBy=multi-user.target

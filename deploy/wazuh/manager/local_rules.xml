@@ -1,0 +1,62 @@
+<!--
+  Agentic SOC local rules for the Wazuh manager: /var/ossec/etc/rules/local_rules.xml
+  (Docker: mount or copy into the wazuh.manager container, then restart it).
+
+  Suricata EVE alerts are covered by Wazuh's stock Suricata rules. Zeek logs are decoded by the
+  JSON decoder but have no stock rules, so the rules below turn *selected* Zeek events into
+  alerts. The sensor agent tags each Zeek file with the label agentic_source=zeek.<log>
+  (see deploy/wazuh/agents/ossec-agent-sensor.xml).
+
+  Validate with /var/ossec/bin/wazuh-logtest before relying on them.
+-->
+<group name="agentic_soc,">
+
+  <!-- Never matches: anchors the active-response registrations in ossec-manager.xml. -->
+  <rule id="100999" level="0">
+    <match>^AGENTIC_SOC_RESERVED_NEVER_MATCHES_6b1f0c$</match>
+    <description>Reserved rule for API-triggered Agentic SOC active responses</description>
+  </rule>
+
+</group>
+
+<group name="zeek,ids,">
+
+  <rule id="100100" level="0">
+    <decoded_as>json</decoded_as>
+    <field name="agentic_source">^zeek</field>
+    <description>Zeek events</description>
+  </rule>
+
+  <rule id="100101" level="6">
+    <if_sid>100100</if_sid>
+    <field name="agentic_source">^zeek.notice$</field>
+    <description>Zeek notice: $(note) $(msg)</description>
+  </rule>
+
+  <rule id="100102" level="8">
+    <if_sid>100101</if_sid>
+    <field name="note">^Scan::</field>
+    <description>Zeek: network scan detected ($(note)) from $(src)</description>
+    <mitre>
+      <id>T1046</id>
+    </mitre>
+  </rule>
+
+  <rule id="100103" level="5">
+    <if_sid>100100</if_sid>
+    <field name="agentic_source">^zeek.ssl$</field>
+    <field name="validation_status" type="pcre2">^(?!ok$).+</field>
+    <description>Zeek: TLS certificate validation failed ($(validation_status)) for $(server_name)</description>
+  </rule>
+
+  <rule id="100104" level="7">
+    <if_sid>100100</if_sid>
+    <field name="agentic_source">^zeek.files$</field>
+    <field name="mime_type" type="pcre2">^application/(x-dosexec|x-executable|x-elf|x-mach-o)</field>
+    <description>Zeek: executable file transferred over the network ($(mime_type))</description>
+    <mitre>
+      <id>T1105</id>
+    </mitre>
+  </rule>
+
+</group>

@@ -1,0 +1,10 @@
+scenario,analyst,alert_received_at,triage_completed_at,response_completed_at,classification,action_taken,notes
+phishing_powershell_download,analyst1,2026-01-12T09:00:00,,,,,
+credential_attack_lateral_movement,analyst1,2026-01-13T09:00:00,,,,,
+suspicious_powershell_outbound,analyst1,2026-01-14T09:00:00,,,,,
+scan_enumeration_exploit,analyst1,2026-01-15T09:00:00,,,,,
+malicious_file_execution_c2,analyst1,2026-01-16T09:00:00,,,,,
+benign_admin_powershell,analyst1,2026-01-17T09:00:00,,,,,
+benign_failed_ssh,analyst1,2026-01-18T09:00:00,,,,,
+benign_package_update,analyst1,2026-01-19T09:00:00,,,,,
+benign_defender_scheduled_task,analyst1,2026-01-20T09:00:00,,,,,
