@@ -1,7 +1,7 @@
 # Agentic SOC
 
 A low-cost, agentic Security Operations Center for a research lab, built from the
-[deployment blueprint](docs/blueprint/Low-Cost_Agentic_SOC_Deployment_Blueprint.docx). It uses:
+[deployment blueprint](docs/blueprint/BLUEPRINT.md). It uses:
 
 * **Open-source detection:** Wazuh SIEM/XDR, Sysmon, Suricata and Zeek.
 * **Threat intelligence:** MISP, VirusTotal and MITRE ATT&CK.
@@ -14,11 +14,78 @@ A low-cost, agentic Security Operations Center for a research lab, built from th
 > **Research question:** can a resource-constrained agentic SOC improve alert triage,
 > correlation and response efficiency while keeping infrastructure and LLM costs low?
 
+## Architecture
+
+```mermaid
+flowchart TD
+    subgraph LAB["Isolated lab network 192.168.50.0/24"]
+        direction TB
+        KALI["Kali<br/>controlled attacks"]
+        subgraph EP["Endpoints"]
+            WIN["Windows client + DC<br/>Sysmon + Wazuh agent"]
+            LIN["Linux server<br/>auditd + Wazuh agent"]
+        end
+        subgraph SENSOR["Network sensor"]
+            SUR["Suricata IDS"]
+            ZEEK["Zeek NSM"]
+        end
+    end
+
+    FW["OPNsense firewall"]
+    WAZUH["Wazuh SIEM/XDR<br/>manager → indexer → dashboard"]
+
+    subgraph SOC["Agentic SOC orchestrator"]
+        direction TB
+        INGEST["Ingest API"] --> NORM["Normalize + deduplicate"]
+        NORM --> CORR["Correlation agent"]
+        CORR --> INV["Investigation agent"]
+        INV --> TI["Threat-intel agent"]
+        TI --> TRIAGE["Triage agent<br/>strict JSON output"]
+        TRIAGE --> POLICY{"Policy engine<br/>risk + confidence + guards"}
+        POLICY -->|"risk 0-4"| LOG["Log only"]
+        POLICY -->|"risk 5-7"| RECO["Recommend"]
+        POLICY -->|"confidence < 0.80"| REVIEW["Human review"]
+        POLICY -->|"risk 10, or a guard fails"| APPROVAL["Analyst approval"]
+        POLICY -->|"risk 8-9, all guards pass"| AUTO["Auto-execute"]
+        RECO -.->|"approve"| RESP
+        REVIEW -.->|"approve"| RESP
+        APPROVAL -->|"approve"| RESP["Response agent<br/>predefined playbooks"]
+        AUTO --> RESP
+    end
+
+    subgraph INTEL["Threat intelligence"]
+        MISP["MISP"]
+        VT["VirusTotal"]
+        ATTACK["MITRE ATT&CK"]
+    end
+
+    subgraph LLM["LLM layer"]
+        OLLAMA["Ollama (local)"]
+        CLAUDE["Claude API (cloud)"]
+        HEUR["Heuristic fallback"]
+    end
+
+    DB[("PostgreSQL research DB<br/>+ hash-chained audit trail")]
+    ANALYST(["SOC analyst"])
+
+    KALI -. attack .-> EP
+    EP -- telemetry --> WAZUH
+    SUR -- "EVE alerts" --> WAZUH
+    ZEEK -- "selected logs" --> WAZUH
+    WAZUH -- "alerts level ≥ 7" --> INGEST
+    INV <--> WAZUH
+    TI <--> INTEL
+    TRIAGE <--> LLM
+    ANALYST -- "approve / reject" --> APPROVAL
+    RESP -- "isolate host / collect evidence / disable user<br/>(Wazuh active response)" --> WAZUH
+    RESP -- "block IP (alias API)" --> FW
+    SOC --> DB
 ```
-Wazuh alert -> normalize -> deduplicate -> correlate -> related alerts -> MISP / VirusTotal / ATT&CK
-  -> incident context -> LLM triage (strict JSON) -> risk + confidence -> policy engine
-  -> log | recommend | analyst approval | predefined automation  -> audit trail
-```
+
+The pipeline is: Wazuh alert → normalize → deduplicate → correlate → related alerts →
+MISP / VirusTotal / ATT&CK → incident context → LLM triage (strict JSON) → risk + confidence →
+policy engine → log, recommend, analyst approval or predefined automation → audit trail.
+Each stage is described in [docs/architecture.md](docs/architecture.md).
 
 ## What is in this repository
 
@@ -30,7 +97,7 @@ Wazuh alert -> normalize -> deduplicate -> correlate -> related alerts -> MISP /
 | `evaluation/` | §22–§25 | Replayable scenarios with ground truth, baseline vs agentic evaluation, cost model |
 | `scripts/` | | ATT&CK bundle download, alert replay into a running deployment |
 | `tests/` | | 80 tests: normalization, schema safety, policy, providers, pipeline, playbooks, API, evaluation |
-| `docs/` | | [Architecture](docs/architecture.md), [deployment guide](docs/deployment-guide.md), [safety model](docs/safety-and-policy.md), [evaluation](docs/evaluation.md), [checklist](docs/implementation-checklist.md) |
+| `docs/` | | [Blueprint (Markdown)](docs/blueprint/BLUEPRINT.md), [architecture](docs/architecture.md), [deployment guide](docs/deployment-guide.md), [safety model](docs/safety-and-policy.md), [evaluation](docs/evaluation.md), [checklist](docs/implementation-checklist.md) |
 
 ## Quick start (no lab required)
 
